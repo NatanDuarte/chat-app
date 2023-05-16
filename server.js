@@ -1,29 +1,36 @@
-const express = require('express');
+const express = require("express");
 const app = express();
-const http = require('http');
-const server = http.createServer(app);
-const path = require('path');
+const http = require("http");
+const cors = require("cors");
 const { Server } = require("socket.io");
-const io = new Server(server);
+app.use(cors());
 
+const server = http.createServer(app);
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"],
+  },
 });
 
-io.on('connection', (socket) => {
-  io.emit('Welcome to the chat room!');
+io.on("connection", (socket) => {
+  console.log(`User Connected: ${socket.id}`);
 
-  socket.on('chat message', (msg) => {
-    io.emit('chat message', msg);
+  socket.on("join_room", (data) => {
+    socket.join(data);
+    console.log(`User with ID: ${socket.id} joined room: ${data}`);
   });
-  socket.on('disconnect', () => {
-    console.log('user disconnected');
+
+  socket.on("send_message", (data) => {
+    socket.to(data.room).emit("receive_message", data);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("User Disconnected", socket.id);
   });
 });
 
-const port = 3000;
-
-server.listen(port, () => {
-  console.log(`listening on http://localhost:${port}`);
+server.listen(3001, () => {
+  console.log("SERVER RUNNING");
 });
